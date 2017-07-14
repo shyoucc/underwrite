@@ -7,59 +7,126 @@
 (function(root){
     'use strict'
 
-    const Uw = function(dom){
+    const Uw = function(options){
+        let originalOptions = {
+            dom: document.getElementsByTagName('canvas')[0],
+            lineWidth: 2,
+            strokeStyle: '#000',
+            fillStyle: '#fff',
+            lineCap: 'round'
+        }
+        this.options = options = Object.assign({}, originalOptions, options)
+        // 设置大小随父级宽高
+        let width = options.dom.parentNode.clientWidth
+        let height = options.dom.parentNode.clientHeight
 
-        this.canvas = dom && dom.nodeType ? dom : document.getElementsByTagName('canvas')[0]
+        let canvas = this.canvas = options.dom
+        canvas.width = width
+        canvas.height = height
 
-        if (!this.canvas.getContext) {
+        // 获取距离hack dom距离问题
+        this.range = canvas.getBoundingClientRect();
+
+        if (!canvas.nodeType || !canvas.getContext) {
             console.warn('node can not Uncaught')
             return
         }
-        this.ctx = this.canvas.getContext('2d')
 
         let that = this
+        this.ctx = canvas.getContext('2d')
+        // 储存连成线的点
+        this.point = []
+
         let ctx = this.ctx
 
-        const CTX_COLOR = '#41AFF2'
-        const CTX_SHADOW_COLOR = '#41AFF2'
-        const CTX_LINECAP = 'round'
-
         // 设置画笔
-        ctx.lineWidth = 10
-        ctx.strokeStyle = CTX_COLOR
-        ctx.shadowColor = CTX_SHADOW_COLOR
-        ctx.lineCap = CTX_LINECAP
+        ctx.lineWidth = options.lineWidth
+        ctx.strokeStyle = options.strokeStyle
+        ctx.fillStyle = options.fillStyle
+        ctx.lineCap = options.lineCap
 
-        this.canvas.addEventListener('touchstart', this._handleStart.bind(that))
-        this.canvas.addEventListener('touchmove', this._handleMove.bind(that))
+        // 判断终端监听
+        let isMobile = /phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone/i.test(navigator.userAgent);
+
+        if (isMobile) {
+            canvas.addEventListener('touchstart', this._handleStart.bind(that))
+            canvas.addEventListener('touchmove', this._handleMove.bind(that))
+            canvas.addEventListener('touchend', this._handleEnd.bind(that))
+        } else {
+            console.warn('请使用移动端')
+        }
+
     }
 
     Uw.prototype._handleStart = function(e){
-        window.requestAnimationFrame(() => {
-            this._move(e)
-        })
+        e.preventDefault()
+        let ctx = this.ctx
+        let that = this
+        // 获取新增加的触点
+        let touches = e.changedTouches
+        for (let i = 0; i < touches.length; i++) {
+            this.point.push(touches[i])
+            ctx.beginPath()
+            ctx.lineTo(touches[i].pageX - that.range.left , touches[i].pageY - that.range.top)
+            ctx.stroke()
+        }
     }
 
     Uw.prototype._handleMove = function(e){
-        window.requestAnimationFrame(() => {
-            this._move(e)
-        })
-    }
-
-    Uw.prototype._move = function(e){
-
-        console.log(e.changedTouches)
+        e.preventDefault()
+        // 获取发生变化的触点
+        let touches = e.changedTouches
+        let point = this.point
+        let ctx = this.ctx
         let that = this
 
-        let x = e.clentX || e.touches[0].clientX
-        let y = e.clentY || e.touches[0].clientY
+        for (let i = 0; i < touches.length; i++) {
+            let id = this._getPointIndex(touches[i].identifier)
+            ctx.beginPath()
+            ctx.moveTo(point[id].pageX - that.range.left, point[id].pageY - that.range.top)
+            ctx.lineTo(touches[i].pageX - that.range.left, touches[i].pageY - that.range.top)
+            ctx.stroke()
+            point.splice(id, 1, touches[i])
+        }
+    }
 
-        console.log(x, y)
+    Uw.prototype._handleEnd = function(e){
+        e.preventDefault()
+        // 列出离开触摸屏幕的触点
+        let touches = e.changedTouches
 
-        that.ctx.beginPath()
-        that.ctx.moveTo(x, y)
-        that.ctx.lineTo(x, y)
-        that.ctx.stroke()
+        for (var i = 0; i < touches.length; i++) {
+            // 删除
+            this.point.splice(i, 1)
+        }
+    }
+
+    Uw.prototype.clear = function(e){
+        let h = this.canvas.clientHeight
+        let w = this.canvas.clientWidth
+        this.ctx.clearRect(0, 0, w, h)
+    }
+
+    // 获取画布图片
+    Uw.prototype.getImgData = function(){
+        return this.canvas.toDataURL()
+    }
+
+    // 上传图片, 转对象
+    Uw.prototype.upLoad = function(){
+
+    }
+
+    // 获取触点index
+    Uw.prototype._getPointIndex = function(idToFind) {
+      for (let i=0; i<this.point.length; i++) {
+        let id = this.point[i].identifier;
+
+        if (id === idToFind) {
+          return i;
+        }
+      }
+      return -1;
     }
 
     root.Uw = Uw
