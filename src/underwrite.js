@@ -53,7 +53,7 @@
             canvas.addEventListener('touchmove', this._handleMove.bind(that))
             canvas.addEventListener('touchend', this._handleEnd.bind(that))
         } else {
-            console.warn('请使用移动端')
+            console.log(` ✘ __info: ${isMobile} 请使用移动端`);
         }
 
     }
@@ -129,6 +129,6 @@
       return -1;
     }
 
-    root.Uw = Uw
+    window.Uw = Uw
 
 })(this)
